@@ -22,25 +22,15 @@ public class Map {
         this.listOfKeys = new ArrayList<>();
         this.visited = new ArrayList<>();
         this.path = file.toPath().toString();
-        ArrayList<String> lines = new ArrayList<>();
-        try {
-            FileReader arq = new FileReader(file);
-            BufferedReader lerArq = new BufferedReader(arq);
-            String line = "hi";
-            while (line != null) {
-                line = lerArq.readLine();
-                if (line != null && line.length() == 0) {
-                    break;
-                }
-                if (line != null) {
-                    lines.add(line);
-                }
-            }
-            arq.close();
-        } catch (IOException e) {
-            System.out.printf("Error while reading the file: %s.\n", e.getMessage());
-        }
+        
+        ArrayList<String> lines = readFile(file);
+        Position[][] matrix = buildMatrix(lines);
+        
+        ArrayList<Position> list = buildGraph(matrix);
+    }
 
+    // Build matrix based on lines from file
+    private Position[][] buildMatrix(ArrayList<String> lines){
         int width = lines.get(0).length();
         int height = lines.size();
 
@@ -55,11 +45,36 @@ public class Map {
                 }
             }
         }
-        ArrayList<Position> list = transformToGraph(matrix);
+        return matrix;
     }
 
+    // Read file and returns a list of lines
+    private ArrayList<String> readFile(File file){
+        ArrayList<String> lines = new ArrayList<>();
+        try {
+            FileReader arq = new FileReader(file);
+            BufferedReader lerArq = new BufferedReader(arq);
+            String line = "null";
+            while (line != null) {
+                line = lerArq.readLine();
+                if (line != null && line.length() != 0) {
+                    lines.add(line);
+                }
+                else break;
+            }
+            arq.close();
+        } catch (IOException e) {
+            System.out.printf("Error while reading the file: %s.\n", e.getMessage());
+        }
+        return lines;
+    }
+
+    private boolean isWall(Position position){
+         return position.getType() == Type.WALL;
+    }
+    
     // Transform matrix to graph
-    private ArrayList<Position> transformToGraph(Position[][] matrix) {
+    private ArrayList<Position> buildGraph(Position[][] matrix) {
         ArrayList<Position> positions = new ArrayList<>();
         int rows = matrix.length;
         int columns = matrix[0].length;
@@ -69,10 +84,10 @@ public class Map {
         for (int i = 1; i < columns - 1; i++) { // For each column
             // Always connecting with the next Position
             Position current = matrix[1][i];
-            if (!(current.getType() == Type.WALL)) {
+            if (!isWall(current)) {
                 positions.add(current);
                 Position next = matrix[1][i + 1];
-                if (!(i == columns - 2) && !(next.getType() == Type.WALL)) {
+                if (!(i == columns - 2) && !isWall(next)) {
                     // Connect the nodes
                     current.addNeighbor(next);
                     next.addNeighbor(current);
@@ -87,16 +102,16 @@ public class Map {
             // Pass from the second column beacuse the first one is always wall
             for (int w = 1; w < columns - 1; w++) {// For each column
                 Position current = matrix[h][w];
-                if (!(current.getType() == Type.WALL)) {
+                if (!isWall(current)) {
                     positions.add(current);
                     Position next = matrix[h][w + 1];
-                    if (!(w == columns - 2) && !(next.getType() == Type.WALL)) {
+                    if (!(w == columns - 2) && !isWall(next)) {
                         // Connect the nodes
                         current.addNeighbor(next);
                         next.addNeighbor(current);
                     }
                     Position above = matrix[h - 1][w];
-                    if (above.getType() != Type.WALL) {
+                    if (!isWall(above)) {
                         // Connect the nodes
                         current.addNeighbor(above);
                         above.addNeighbor(current);
@@ -108,7 +123,7 @@ public class Map {
     }
 
     private int walk(Position position) {
-        if (!position.isAccessible()) {
+        if (!position.isAccessible() && position.IsMarked()) {
             return 0;
         }
         // It means that the method is called by a player and it's needed to markOff all
@@ -116,10 +131,6 @@ public class Map {
         if (position.getType() == Type.PLAYER) {
             beginWalk();
             // System.out.println("Jogando com o player: " + position.getLabel());
-        }
-
-        if (position.IsMarked()) {
-            return 0;
         }
 
         ArrayList<Position> list = new ArrayList<Position>();
@@ -133,7 +144,7 @@ public class Map {
         while (!list.isEmpty()) {
             Position v = list.get(0);
             if (visited.contains(v)) {
-                System.out.println("Repetido: " + v);
+                // System.out.println("Repetido: " + v);
             } else {
                 visited.add(v);
             }
@@ -162,7 +173,6 @@ public class Map {
                         // System.out
                         // .println("Nodo " + position.getLabel() + " encontrou a porta: " +
                         // neighbor.getLabel());
-
                     } else {
                         neighbor.markPosition(true);
                         markedPositions.add(neighbor);
